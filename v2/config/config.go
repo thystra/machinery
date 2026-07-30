@@ -21,6 +21,11 @@ var (
 			ConnectTimeout:         15,
 			NormalTasksPollPeriod:  1000,
 			DelayedTasksPollPeriod: 500,
+			ClaimLeaseDuration:     120000,
+			ClaimRenewInterval:     30000,
+			ClaimRecoveryPeriod:    1000,
+			ClaimRecoveryBatchSize: 100,
+			ClaimKeyPrefix:         "machinery:claims",
 		},
 	}
 	reloadDelay = 10 * time.Second
@@ -55,4 +60,16 @@ type RedisConfig struct {
 	MasterName             string `yaml:"master_name" envconfig:"REDIS_MASTER_NAME"`
 	ClusterEnabled         bool   `yaml:"cluster_enabled" envconfig:"REDIS_CLUSTER_ENABLED"`
 	SentinelPassword       string `yaml:"sentinel_password" envconfig:"REDIS_SENTINEL_PASSWORD"`
+
+	// ClaimLeaseDuration is the visibility lease for a claimed task, in
+	// milliseconds. The go-redis broker renews this lease while processing.
+	ClaimLeaseDuration int `yaml:"claim_lease_duration_milliseconds" envconfig:"REDIS_CLAIM_LEASE_DURATION_MILLISECONDS"`
+	// ClaimRenewInterval is the lease-renewal interval, in milliseconds.
+	ClaimRenewInterval int `yaml:"claim_renew_interval_milliseconds" envconfig:"REDIS_CLAIM_RENEW_INTERVAL_MILLISECONDS"`
+	// ClaimRecoveryPeriod is the expired-claim scan period, in milliseconds.
+	ClaimRecoveryPeriod int `yaml:"claim_recovery_period_milliseconds" envconfig:"REDIS_CLAIM_RECOVERY_PERIOD_MILLISECONDS"`
+	// ClaimRecoveryBatchSize limits claims recovered in one atomic scan.
+	ClaimRecoveryBatchSize int `yaml:"claim_recovery_batch_size" envconfig:"REDIS_CLAIM_RECOVERY_BATCH_SIZE"`
+	// ClaimKeyPrefix namespaces the reliable claim payload and lease keys.
+	ClaimKeyPrefix string `yaml:"claim_key_prefix" envconfig:"REDIS_CLAIM_KEY_PREFIX"`
 }
