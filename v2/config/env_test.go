@@ -2,45 +2,46 @@ package config_test
 
 import (
 	"bufio"
+	"github.com/RichardKnop/machinery/v2/config"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/RichardKnop/machinery/v2/config"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewFromEnvironment(t *testing.T) {
-	t.Parallel()
-
 	file, err := os.Open("test.env")
 	if err != nil {
 		t.Fatal(err)
 	}
-	reader := bufio.NewReader(file)
-	scanner := bufio.NewScanner(reader)
-	scanner.Split(bufio.ScanLines)
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		parts := strings.Split(scanner.Text(), "=")
-		if len(parts) != 2 {
-			continue
+		parts := strings.SplitN(scanner.Text(), "=", 2)
+		if len(parts) == 2 {
+			t.Setenv(parts[0], parts[1])
 		}
-		os.Setenv(parts[0], parts[1])
 	}
-
+	if err := scanner.Err(); err != nil {
+		t.Fatal(err)
+	}
 	cnf, err := config.NewFromEnvironment()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	assert.Equal(t, "broker", cnf.Broker)
+	assert.Equal(t, "redis://broker.example:6379/5", cnf.Broker)
 	assert.Equal(t, "default_queue", cnf.DefaultQueue)
-	assert.Equal(t, "result_backend", cnf.ResultBackend)
+	assert.Equal(t, "redis://backend.example:6379/5", cnf.ResultBackend)
 	assert.Equal(t, 123456, cnf.ResultsExpireIn)
-	assert.Equal(t, "exchange", cnf.AMQP.Exchange)
-	assert.Equal(t, "exchange_type", cnf.AMQP.ExchangeType)
-	assert.Equal(t, "binding_key", cnf.AMQP.BindingKey)
-	assert.Equal(t, "any", cnf.AMQP.QueueBindingArgs["x-match"])
-	assert.Equal(t, "png", cnf.AMQP.QueueBindingArgs["image-type"])
-	assert.Equal(t, 123, cnf.AMQP.PrefetchCount)
+	assert.Equal(t, 12, cnf.Redis.MaxIdle)
+	assert.Equal(t, 123, cnf.Redis.MaxActive)
+	assert.Equal(t, 456, cnf.Redis.IdleTimeout)
+	assert.Equal(t, 1001, cnf.Redis.NormalTasksPollPeriod)
+	assert.Equal(t, 23, cnf.Redis.DelayedTasksPollPeriod)
+	assert.Equal(t, "delayed_tasks_key", cnf.Redis.DelayedTasksKey)
+	assert.Equal(t, "relay-client", cnf.Redis.ClientName)
+	assert.Equal(t, "master_name", cnf.Redis.MasterName)
+	assert.True(t, cnf.Redis.ClusterEnabled)
+	assert.Equal(t, "sentinel-secret", cnf.Redis.SentinelPassword)
+	assert.True(t, cnf.NoUnixSignals)
 }
