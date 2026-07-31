@@ -1,0 +1,78 @@
+# /home/alan/src/machinery/.github/workflows/v2-ci.yml
+
+name: Machinery v2 CI
+
+on:
+  push:
+    branches:
+      - activity-relay-redis-only-v2.0.16
+      - chore/remove-v1-root-module
+      - "feature/**"
+  pull_request:
+    paths:
+      - "v2/**"
+      - "README.md"
+      - ".github/workflows/v2-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: machinery-v2-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-v2:
+    name: Validate Machinery v2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      REDIS_URL: redis://127.0.0.1:6379
+
+    defaults:
+      run:
+        working-directory: v2
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.24.1"
+          cache: true
+          cache-dependency-path: v2/go.sum
+
+      - name: Show tool versions
+        run: |
+          go version
+          redis-cli --version
+          redis-cli -u "$REDIS_URL" ping
+
+      - name: Verify modules
+        run: go mod verify
+
+      - name: Run tests
+        run: go test -count=1 -p 1 ./...
+
+      - name: Run race tests
+        run: go test -race -count=1 -p 1 ./...
+
+      - name: Run vet
+        run: go vet ./...
+
+# EOF: /home/alan/src/machinery/.github/workflows/v2-ci.yml
