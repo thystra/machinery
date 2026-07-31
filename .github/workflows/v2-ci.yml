@@ -57,6 +57,11 @@ jobs:
           cache: true
           cache-dependency-path: v2/go.sum
 
+      - name: Install Redis client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends redis-tools
+
       - name: Show tool versions
         run: |
           go version
